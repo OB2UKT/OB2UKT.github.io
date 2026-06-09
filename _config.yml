@@ -1,0 +1,45 @@
+# Thông tin cơ bản của Blog
+title: OB2UKT's Tech Blog
+description: Just a newbie who wants to share knowledge and help others save time when learning about cybersecurity.
+lang: en
+
+
+url: "https://OB2UKT.github.io"
+baseurl: "" 
+
+
+author: OB2UKT
+avatar: /Itachi.jpg
+email: 23520896@gm.uit.edu.vn
+
+
+plugins:
+  - jekyll-seo-tag
+  - jekyll-feed
+  - jekyll-sitemap
+  - jekyll-paginate
+
+
+paginate: 10
+
+
+exclude:
+  - scripts/
+  - README.md
+  - jekyll-theme-hamilton.gemspec
+  - Gemfile
+  - Gemfile.lock
+
+
+logo: Itachi.jpg
+Facebook:
+  username: LuanNguyen
+  card: summary
+
+social:
+  name: OB2UKT
+  links:
+    - https://github.com/OB2UKT
+    - https://www.facebook.com/luan211
+
+
