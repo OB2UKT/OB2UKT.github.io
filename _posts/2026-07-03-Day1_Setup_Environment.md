@@ -55,12 +55,13 @@ Về mặt bản chất thì cả 2 công cụ đều có điểm chung:
 - Đều cho phép người dùng sử dụng dashboard, truy vấn dữ liệu và thiết lập cảnh báo khi có sự cố bảo mật.
 
 Điểm khác giữa 2 công cụ: 
-|Tiêu chí|ELK Stack|Splunk|
-|:--------|:--------:|:--------:|
-|Mô hình |Mã nguồn mở, có tính linh hoạt cao |Phần mềm thương mại, đóng gói sẵn|
-|Triển khai|Tự cấu hình, quản lý và bảo trì|Cung cấp trải nghiệm có sẵn dễ dàng sử dụng|
-|Chi Phí|Chi phí thấp|Chi phí bản quyền cao|
-|Hệ sinh thái|Cộng đồng hỗ trợ lớn, tích hợp tùy biến mạnh mẽ|Hỗ trợ cho doanh nghiệp, môi trường chuyên nghiệp, có nhiều plugin có sẵn|
+
+| Tiêu chí | ELK Stack | Splunk |
+| :--- | :--- | :--- |
+| Mô hình | Mã nguồn mở, có tính linh hoạt cao | Phần mềm thương mại, đóng gói sẵn |
+| Triển khai | Tự cấu hình, quản lý và bảo trì | Cung cấp trải nghiệm có sẵn dễ dàng sử dụng |
+| Chi Phí | Chi phí thấp | Chi phí bản quyền cao |
+| Hệ sinh thái | Cộng đồng hỗ trợ lớn, tích hợp tùy biến mạnh mẽ | Hỗ trợ cho doanh nghiệp |
 
 Chính vì thế ELK Stack sẽ phù hợp hơn với dự án hiện tại khi ta có thể linh hoạt điều chỉnh và bản thân là open source nên dễ dàng tiếp cận hơn với người mới.
 
@@ -102,13 +103,13 @@ services:
       - ELASTIC_PASSWORD=SOC_Password_123! # Set cứng mật khẩu cho user 'elastic'
       - xpack.security.enabled=true # Bắt buộc cho Fleet/Agent
       - xpack.security.http.ssl.enabled=false # Tắt TLS để dễ kết nối từ KVM và giảm tải CPU
-      - ES_JAVA_OPTS=-Xms2g -Xmx2g # ROOT CAUSE FIX: Giới hạn cứng JVM Heap size là 2GB
+      - ES_JAVA_OPTS=-Xms2g -Xmx2g # Giới hạn cứng JVM Heap size là 2GB
     volumes:
       - es_data:/usr/share/elasticsearch/data
     ports:
       - "9200:9200"
     networks:
-      - soc_private_net # Đã đảm bảo đúng từ khóa (có chữ 's')
+      - soc_private_net
     deploy:
       resources:
         limits:
