@@ -158,7 +158,7 @@ curl -X POST -u elastic:SOC_Password_123! "http://localhost:9200/_security/user/
 ```
 Và từ đó ta sẽ login với tài khoản elastic để làm việc như thông thường.
 
-![Intercepted Request](assets/img/material_posts/post_1/KibanScreen.jpg){: width="800" height="500" }
+![Intercepted Request](assets/img/material_posts/post_1/KibanaScreen.jpg){: width="800" height="500" }
 _Hình 3:Đây là hình ảnh sau giao diện của Kibana khi ta đăng nhập thành công._
 
 
