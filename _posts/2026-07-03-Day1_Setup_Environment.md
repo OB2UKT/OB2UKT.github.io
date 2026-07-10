@@ -130,6 +130,38 @@ networks:
 Sau khi cấu hình xong file ta chỉ cần chạy lệnh "docker compose up -d" để hoàn tất việc cài đặt Elasticsearch.
 
 ### Kibana set-up
+```yml
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.15.0
+    container_name: kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - SERVER_NAME=soc-kibana
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200 # Khai báo gọi thẳng tên container ES qua mạng nội bộ
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD=SOC_Password_123!  # ở đây set tạm thời tránh để credential dạng cleartext trong file.
+    networks:
+      - soc_private_net
+    depends_on:
+      - elasticsearch # Đảm bảo ES khởi động xong thì Kibana mới được chạy
+    deploy:
+      resources:
+        limits:
+          memory: 1G # Giới hạn tài nguyên sử dụng ram.
+```
+Kibana cũng là một phần của ELK Stack chính vì thế để tiện lợi ta thực hiện pull Kibana version 8.15, tuy nhiên cần lưu ý rằng đối với Kibana từ bản 8+ sẽ áp dụng nguyên tắc đặc quyền tối thiểu (hay Principle of Least Privilege). Bởi vì Kibana còn nhiều tác vụ chạy ngầm và ghi dữ liệu vào index hệ thống nên nếu sử Superuser (tài khoản elastic) để làm việc này rủi ro leo thang đặc quyền sẽ cao nếu như Kibana bị tấn công. 
+
+Chính vì thế ở phần này ta phải dùng tài khoản chuyên dụng "kibana_system" (đây là tài khoản đã có sẵn nhưng chưa được cài mật khẩu) ta sẽ đặt mật khẩu cho tài khoản thông qua lệnh sau: 
+```bash
+curl -X POST -u elastic:SOC_Password_123! "http://localhost:9200/_security/user/kibana_system/_password" -H "Content-Type: application/json" -d '{"password":"SOC_Password_123!"}' 
+```
+Và từ đó ta sẽ login với tài khoản elastic để làm việc như thông thường.
+
+![Intercepted Request](assets/img/material_posts/post_1/KibanScreen.jpg){: width="800" height="500" }
+_Hình 3:Đây là hình ảnh sau giao diện của Kibana khi ta đăng nhập thành công._
+
+
 
 ## Thực nghiệm tấn công 
 ## Phân tích cách thức tấn công
