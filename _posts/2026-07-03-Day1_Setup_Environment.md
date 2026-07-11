@@ -75,9 +75,9 @@ Chính vì thế ELK Stack sẽ phù hợp hơn với dự án hiện tại khi 
 ## Triển khai thực tiễn
 ### Cách thức triển khai
 Mô hình sẽ có thể triển khai trơn tru nếu như có thể host trên cloud tuy nhiên để tối ưu chi phí và chỉ dùng một máy điều hành tất cả thì ở đây ta sẽ chuyển mô hình dưới dạng host như sau:
-- Máy Attacker (Kali-Linux), Windows Server(RDP) sẽ được host trên KVM/QEMU.
-- Máy SOC Analyst Laptop sẽ chính là máy host. 
-- Elastic & Kibana + Fleet Server + Ubuntu Server (SSH) + osTicket Server + C2 server sẽ được host Docker.
+- Host trên KVM/QEMU: máy Attacker (Kali-Linux), Windows Server(RDP). 
+- Máy Host sẽ đóng vai là máy SOC Analyst Laptop. 
+- Host trên Docker: Elastic & Kibana + Fleet Server + Ubuntu Server (SSH) + osTicket Server + C2 server.
 
 Tuy nhiên đối với cách làm này sẽ mắc phải vấn đề giữa 2 cách ảo hóa KVM và Docker, chúng sẽ thực hiện tạo ra các switch mạng ảo khác nhau. Điều nay đi ngược hoàn toàn so với mô hình ban đầu đó là các server đều nằm chung 1 mạng. Để giải quyết việc này ta sẽ điều chỉnh iptables (mở tường lửa) trên máy host để đứng ra để thực hiện chuyển tiếp các gói tin giữa 2 vùng mạng, và biến nó hoạt động tương tự như chúng đang nằm trong một mạng.
 
@@ -89,8 +89,6 @@ _Hình 2: Cấu hình cài đặt mmap trên máy host_
 ### Elasticsearch Set-up
 Để cấu hình Elastic ta thực hiện cấu hình trên docker-compose.yml như sau: 
 ```yml
-
-version: '3.8'
 
 services:
   elasticsearch:
@@ -153,14 +151,38 @@ Sau khi cấu hình xong file ta chỉ cần chạy lệnh "docker compose up -d
 Kibana cũng là một phần của ELK Stack chính vì thế để tiện lợi ta thực hiện pull Kibana version 8.15, tuy nhiên cần lưu ý rằng đối với Kibana từ bản 8+ sẽ áp dụng nguyên tắc đặc quyền tối thiểu (hay Principle of Least Privilege). Bởi vì Kibana còn nhiều tác vụ chạy ngầm và ghi dữ liệu vào index hệ thống nên nếu sử Superuser (tài khoản elastic) để làm việc này rủi ro leo thang đặc quyền sẽ cao nếu như Kibana bị tấn công. 
 
 Chính vì thế ở phần này ta phải dùng tài khoản chuyên dụng "kibana_system" (đây là tài khoản đã có sẵn nhưng chưa được cài mật khẩu) ta sẽ đặt mật khẩu cho tài khoản thông qua lệnh sau: 
+
 ```bash
 curl -X POST -u elastic:SOC_Password_123! "http://localhost:9200/_security/user/kibana_system/_password" -H "Content-Type: application/json" -d '{"password":"SOC_Password_123!"}' 
 ```
 Và từ đó ta sẽ login với tài khoản elastic để làm việc như thông thường.
 
 ![Intercepted Request](assets/img/material_posts/post_1/KibanaScreen.jpg){: width="800" height="500" }
-_Hình 3:Đây là hình ảnh sau giao diện của Kibana khi ta đăng nhập thành công._
+_Hình 3: Đây là hình ảnh sau giao diện của Kibana khi ta đăng nhập thành công._
 
+### Fleet Server setup
+Đối với chình sách mới nhất của Elasitc Search ở đây yêu cầu ta phải dùng theo chuẩn HTTPS để đảm bảo an toàn tuy nhiên dưới góc độ là một bài lab cá nhân và chạy hoàn toàn local thì tôi đánh giá hướng đi này khá phức tạp (mặc dù điều này thực tế). Ngoài ra việc sử dụng HTTPS sẽ tăng thêm chi phí và dễ gặp phải một số thách thức khi ta chạy lab ở mạng nội bộ thì phải dùng Self-signed Certificate (Chứng chỉ tự ký) thay vì sử dụng các chứng chỉ public dẫn đến các trường hợp ngắt kết nối tự động/lỗi (x509: certificate signed by unknown authority). Chính vì thế trong phạm vị lab này ta sẽ sử dụng HTTP và thực hiện một số thủ thuật để đánh lừa và bypass cơ chế này của Elastic Search (hành động này không khuyến cáo chỉ phục vụ cho mục đích bài lab).
+
+Đầu tiên ta sẽ thực hiện cấu hình Fleet Server như thông thường và ta xác định bước verify URL chỉ nằm ở client-side.
+
+![Intercepted Request](assets/img/material_posts/post_1/config_fleetServer.jpg){: width="800" height="500" }
+_Hình 4: Cấu hình chi tiết của Fleet Server trên Kibana._
+
+Ở bước này ta sẽ sử dụng Burpsuite (Intercept mode) để can thiệp và sửa nội dung gói tin trước khi nó được truyền tới và xử lý ở back-end.
+
+![Intercepted Request](assets/img/material_posts/post_1/change_config_fleetServer_1.jpg){: width="800" height="500" }
+_Hình 5: Đây là hình ảnh mô tả giai đoạn sửa nội dung gói tin (method PUT)._
+
+Sau bước này ta sửa về http và foward đi thì ta đã hoàn toàn có thể sửa đổi được ip như mong muốn.
+
+![Intercepted Request](assets/img/material_posts/post_1/change_config_fleetServer_success.jpg){: width="800" height="500" }
+_Hình 6: Kết quả thực tế._
+
+### Cấu hình Ubuntu Server 
+
+### Cấu hình osTicket
+
+### Cấu hình Iptables
 
 
 ## Thực nghiệm tấn công 
