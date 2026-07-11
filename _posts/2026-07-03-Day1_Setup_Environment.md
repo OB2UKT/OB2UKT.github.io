@@ -163,7 +163,7 @@ _Hình 3: Đây là hình ảnh sau giao diện của Kibana khi ta đăng nhậ
 ### Fleet Server setup
 Đối với chình sách mới nhất của Elasitc Search ở đây yêu cầu ta phải dùng theo chuẩn HTTPS để đảm bảo an toàn tuy nhiên dưới góc độ là một bài lab cá nhân và chạy hoàn toàn local thì tôi đánh giá hướng đi này khá phức tạp (mặc dù điều này thực tế). Ngoài ra việc sử dụng HTTPS sẽ tăng thêm chi phí và dễ gặp phải một số thách thức khi ta chạy lab ở mạng nội bộ thì phải dùng Self-signed Certificate (Chứng chỉ tự ký) thay vì sử dụng các chứng chỉ public dẫn đến các trường hợp ngắt kết nối tự động/lỗi (x509: certificate signed by unknown authority). Chính vì thế trong phạm vị lab này ta sẽ sử dụng HTTP và thực hiện một số thủ thuật để đánh lừa và bypass cơ chế này của Elastic Search (hành động này không khuyến cáo chỉ phục vụ cho mục đích bài lab).
 
-Đầu tiên ta sẽ thực hiện cấu hình Fleet Server như thông thường và ta xác định bước verify URL chỉ nằm ở client-side.
+Đầu tiên ta sẽ thực hiện cấu hình Fleet Server như thông thường và ta xác định bước verify phía client-side.
 
 ![Intercepted Request](assets/img/material_posts/post_1/config_fleetServer.jpg){: width="800" height="500" }
 _Hình 4: Cấu hình chi tiết của Fleet Server trên Kibana._
@@ -183,7 +183,6 @@ _Hình 6: Kết quả thực tế._
 ### Cấu hình osTicket
 
 ### Cấu hình Iptables
-
 
 ## Thực nghiệm tấn công 
 ## Phân tích cách thức tấn công
