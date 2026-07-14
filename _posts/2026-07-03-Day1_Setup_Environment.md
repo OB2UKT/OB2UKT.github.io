@@ -207,7 +207,6 @@ Fleet Server ra đời nhằm giải quyết nhu cầu:
 - Giảm tải và đứng ra gánh vác vai trò thay cho Elasticsearch/Kibana, thay vì để các dịch vụ này đón các connection khổng lồ từ nhiều agent.
 - Bảo mật hơn, tránh lateral movement. Fleet server chỉ thực hiện cấp API key độc lập, duy nhất và giới hạn quyền tối thiểu, nếu như agent bị khai thác và lấy được API key này cũng không thể lây lan hay tấn công các agent khác.
 
-
 Đối với chính sách mới nhất của Elasitc Search ở đây yêu cầu ta phải dùng theo chuẩn HTTPS để đảm bảo an toàn tuy nhiên dưới góc độ là một bài lab cá nhân và chạy hoàn toàn local thì tôi đánh giá hướng đi này khá phức tạp (mặc dù điều này thực tế). Ngoài ra việc sử dụng HTTPS sẽ tăng thêm chi phí và dễ gặp phải một số thách thức khi ta chạy lab ở mạng nội bộ thì phải dùng Self-signed Certificate (Chứng chỉ tự ký) thay vì sử dụng các chứng chỉ public dẫn đến các trường hợp ngắt kết nối tự động/lỗi (x509: certificate signed by unknown authority). Chính vì thế trong phạm vị lab này ta sẽ sử dụng HTTP và thực hiện một số thủ thuật để đánh lừa và bypass cơ chế này của Elastic Search (hành động này không khuyến cáo chỉ phục vụ cho mục đích bài lab).
 
 Đầu tiên ta sẽ thực hiện cấu hình Fleet Server như thông thường và ta xác định bước verify phía client-side.
@@ -230,13 +229,57 @@ _Hình 6: Kết quả thực tế._
 Ở phiên bản này ta lựa chọn Windows Server 2022, tuy không là phiên bản quá mới nhưng đối với phiên bản này hội tụ đủ những yếu tố về bảo mật, tích hợp được agent, được phiên bản ELK version 8.15.5 support tốt, ngoài ra còn đáp ứng tiêu chí tiết kiệm RAM. Đối với phần này ta sẽ tiến hành thực hiện cài đặt cấu hình sysmon, cài đặt agent lên máy và thực hiện kết nối agent tới Fleet server cũng như gửi logs về Elasticsearch.
 
 #### Cài đặt Sysmon 
+Sysmon (System Monitor) là công cụ thuộc bộ tiện ích Sysinternals của Microsoft. Khi được cài đặt trên hệ thống Windows, nó hoạt động dưới dạng một Windows service và một device driver ở tầng Kernel. Nhiệm vụ chính là theo dõi, giám sát các hoạt động ở mức hệ thống (system activity) và ghi lại toàn bộ thông tin chi tiết này vào Windows Event Log. Ta cần cài đặt thêm Sysmon để phục vụ tốt hơn cho việc phân tích logs, bởi vì Windows Event Log thông thường có một số nhược điểm sau:
+- Thiếu ngữ cảnh của tiến trình về mã băm, mặc dù Event ID 4688 (Process Creation) mặc định của Windows không tự tính toán mã băm của tệp thực thi. Việc xác minh tính toàn vẹn của một file nghi ngờ chỉ dựa vào log mặc định là không khả thi.
+- Đứt gãy chuỗi ngữ cảnh mạng, đối với Event ID 5156 (Windows Filtering Platform) mặc định có sự ghi nhận các kết nối mạng tuy nhiên vô tình tạo ra một lượng rác lớn và khó để đối chiếu/truy vấn trực tiếp mạng hoặc tiến trình cụ thể đã bắt nguồn từ đâu.
+- Mù trước các kỹ thuật tấn công filess-malware.
 
+Tiếp theo ta đến với các bước cài đặt Sysmon. 
+
+![Intercepted Request](assets/img/material_posts/post_1/sysmon_v1521_in4.jpg){: width="800" height="500" }
+_Hình 7: Mô tả chi tiết gói Sysmon._
+
+Sau đó ta tiến hành giải nén và thực hiện các bước cài đặt tuần tự.
+
+![Intercepted Request](assets/img/material_posts/post_1/install_Sysmon.jpg){: width="800" height="500" }
+_Hình 8: Chạy lệnh cài đặt Sysmon._
+
+Ở đây ta sử dụng bộ rule được thiết lập sẵn (sysmonconfig.xml) từ github sysmon-modular, đây là tập hợp các rules được viết sẵn, khi Sysmon đọc đực file này thì tiến hành xử lý chính xác những đối tượng cần bắt và bỏ qua dựa trên những hoạt động trên hệ thống Windows. 
+
+Bộ rules có sẵn giúp giải quyết được bài toán về số logs lượng lớn và cách phân tích logs tối ưu để giảm nhiễu, được cập nhật thường xuyên, tránh false-positves và outdate.
+
+![Intercepted Request](assets/img/material_posts/post_1/config_sysmon_windowServer2022.jpg){: width="800" height="500" }
+_Hình 9: Thiết lập Sysmon chạy với bộ rule đã có sẵn._
+
+
+![Intercepted Request](assets/img/material_posts/post_1/result_after_config_sysmon.jpg){: width="800" height="500" }
+_Hình 10: Sau khi thiết lập thành công Sysmon._
 
 #### Cài đặt Agent
+Các agent này được cài trên máy host nhằm mục đích lắng nghe logs trên máy host và tiến hành gửi về cho Elasticsearch để làm tài nguyên phân tích. Chính vì thế ở phần này ta sẽ có 2 mục tiêu chính là thiết lập kết nối về Elasticsearch (port 9200) để gửi logs và kết nối tới Fleet Server (port 8220) để thực hiện quản lý chính agent.
+
+Để làm được điều này ta tiến hành cài đặt elastic và cài đặt với các tham số như địa chỉ fleet-servr, token, policy, port. Khi chạy thành công ta sẽ thấy được "Elastic Agent has been successfully installed".
+
+```bash
+$ProgressPreference = 'SilentlyContinue'
+Invoke-WebRequest -Uri https://artifacts.elastic.co/downloads/beats/elastic-agent/elastic-agent-8.15.0-windows-x86_64.zip -OutFile elastic-agent-8.15.0-windows-x86_64.zip
+Expand-Archive .\elastic-agent-8.15.0-windows-x86_64.zip
+cd elastic-agent-8.15.0-windows-x86_64
+.\elastic-agent.exe install `
+  --fleet-server-es=http://192.168.122.1:9200 `
+  --fleet-server-service-token=TOKEN_HIDDEN_WHEN_DISPLAY `
+  --fleet-server-policy=fleet-server-policy `
+  --fleet-server-port=8220
+```
+
+#### Cài đặt Intergration
 
 
 ### Cấu hình Ubuntu Server 24.04
 
+#### Cài đặt Agent
+
+#### Cài đặt Intergration
 
 
 ### Cấu hình osTicket
