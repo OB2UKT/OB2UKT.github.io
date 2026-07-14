@@ -160,8 +160,55 @@ Và từ đó ta sẽ login với tài khoản elastic để làm việc như th
 ![Intercepted Request](assets/img/material_posts/post_1/KibanaScreen.jpg){: width="800" height="500" }
 _Hình 3: Đây là hình ảnh sau giao diện của Kibana khi ta đăng nhập thành công._
 
-### Fleet Server setup
-Đối với chình sách mới nhất của Elasitc Search ở đây yêu cầu ta phải dùng theo chuẩn HTTPS để đảm bảo an toàn tuy nhiên dưới góc độ là một bài lab cá nhân và chạy hoàn toàn local thì tôi đánh giá hướng đi này khá phức tạp (mặc dù điều này thực tế). Ngoài ra việc sử dụng HTTPS sẽ tăng thêm chi phí và dễ gặp phải một số thách thức khi ta chạy lab ở mạng nội bộ thì phải dùng Self-signed Certificate (Chứng chỉ tự ký) thay vì sử dụng các chứng chỉ public dẫn đến các trường hợp ngắt kết nối tự động/lỗi (x509: certificate signed by unknown authority). Chính vì thế trong phạm vị lab này ta sẽ sử dụng HTTP và thực hiện một số thủ thuật để đánh lừa và bypass cơ chế này của Elastic Search (hành động này không khuyến cáo chỉ phục vụ cho mục đích bài lab).
+
+### Cấu hình Firewall & Iptables
+Như đã đề cập trước đó ta sẽ có kiến trúc và phân vùng mạng sẽ bao gồm: 
+- SOC Management Zone: Kibana & Elasticsearch and osTicket Server, Fleet Server (The Bridge -  cầu nối mở cổng 8220 để nhận log từ các máy khác). 
+- Target Zone: Windows Server and Ubuntu Server.
+- Internet (Untrusted Zone): SOC Analyst Laptop, C2 Server, Attacker Laptop.
+
+Vấn đề host trên nhiều nền tảng khác nhau như Docker, KVM đã gây ra vấn đề lớn về việc không cùng nằm chung 1 mạng bởi vì Docker sử dụng container ảo hóa với card mạng **br-bd90203b279c - 127.20.0.0/16** và KVM sử dụng card mạng **virbr0 - 192.168.122.0/24**, nếu như kiếm cách giao tiếp giữa 2 vùng mạng ảo hóa này sẽ gặp rất nhiêu khó khăn và lỗi vì bản chất chúng đều có cơ chế Network Isolation và tự động DROP/REJECT các traffic đi tới. 
+
+Giải pháp ở đây thay vì ta tìm cách kết nối giữa 2 vùng mạng thì ta sẽ dùng máy host chính đứng ra làm trung gian cho sự giao tiếp giữa 2 phân vùng mạng ảo hóa, về bản chất khi ta khởi tạo 1 port mở trên docker thì cũng chính máy host sẽ lắng nghe port đó (VD: docker có port mở 172.20.0.1:8220 --> trên máy host cũng mở port 8220 để lắng nghe mọi địa chỉ ip). Thay vì gửi trực tiếp các traffic từ máy ảo (KVM) đến đích (docker) ta có thể đi vòng sang con đường máy host bằng cách gửi trực tiếp cho IP Gateway của nó chính là 192.168.122.1:8220. Khi gói tin được gửi đến host nó sẽ tự động đi vào PREROUTING của Iptable để thực hiện cơ chế DNAT (Destination Network Address Translation) của docker, tiến hành nhận gói tin và xóa địa chỉ đích của gói tin 192.168.122.1 --> 172.20.0.1:8220 và cuối cùng quy trình phản hồi cũng tương tự.
+
+#### Cấu hình UFW (Firewall)
+
+```bash
+# Mở traffic từ mạng ảo KVM virbr0 
+sudo ufw allow in on virbr0
+
+# Mở cổng Control Plane (Fleet Server - 8220) và Data Plane (Elasticsearch - 9200)
+sudo ufw allow 8220/tcp
+sudo ufw allow 9200/tcp
+
+# Bật tính năng Forwarding, cho phép gói tin chui vào mạng Docker.
+sudo sed -i 's/DEFAULT_FORWARD_POLICY="DROP"/DEFAULT_FORWARD_POLICY="ACCEPT"/g' /etc/default/ufw
+sudo ufw reload
+
+# Hoặc đơn giản hơn nhưng không thực tiễn chỉ phụ vụ trong lab, chúng ta có thể tắt tạm UFW (Không khuyến cáo trong thực tế).
+sudo ufw disable
+```
+
+#### Cấu hình iptable
+
+```bash
+# Đặt rule ở mức ưu tiên cao nhất để cho phép trafic từ KVM được xử lý.
+sudo iptables -I DOCKER-USER 1 -i virbr0 -j ACCEPT
+sudo iptables -I DOCKER-USER 1 -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+```
+
+Sau khi cấu hình thành công ta đã đáp ứng được việc các agent nằm trên các máy host có thể gửi trực tiếp log trực tiếp về Elastic Search (port 9200), ngoài ra các agent này phải bị kiểm soát, quản lý thông qua kết nối với Fleet Server (port 8220).
+
+### Fleet Server set-up
+Fleet Server (Control Plane) được thiết lập để quản lý toàn bộ các Elastic Agent được cài đặt trên các máy host. Bản chất nó vẫn là một elastic-agent thông thường, tuy nhiên nó sẽ không đọc logs và đổ về cho Kibana mà ngược lại nó lắng nghe ở port 8220 để quản lý, nhận kết nối từ các Agent khác đổ về. Fleet Server có quyền hành cao dùng để cấp phát API key, quản lý trạng thái của các agent, cấu hình các agent. 
+
+Fleet Server ra đời nhằm giải quyết nhu cầu: 
+- Về quản lý cấu hình tập trung với quy mô lớn (sửa đồng bộ và áp dụng chính sách cấu hình lên toàn bộ agent quản lý).
+- Giảm tải và đứng ra gánh vác vai trò thay cho Elasticsearch/Kibana, thay vì để các dịch vụ này đón các connection khổng lồ từ nhiều agent.
+- Bảo mật hơn, tránh lateral movement. Fleet server chỉ thực hiện cấp API key độc lập, duy nhất và giới hạn quyền tối thiểu, nếu như agent bị khai thác và lấy được API key này cũng không thể lây lan hay tấn công các agent khác.
+
+
+Đối với chính sách mới nhất của Elasitc Search ở đây yêu cầu ta phải dùng theo chuẩn HTTPS để đảm bảo an toàn tuy nhiên dưới góc độ là một bài lab cá nhân và chạy hoàn toàn local thì tôi đánh giá hướng đi này khá phức tạp (mặc dù điều này thực tế). Ngoài ra việc sử dụng HTTPS sẽ tăng thêm chi phí và dễ gặp phải một số thách thức khi ta chạy lab ở mạng nội bộ thì phải dùng Self-signed Certificate (Chứng chỉ tự ký) thay vì sử dụng các chứng chỉ public dẫn đến các trường hợp ngắt kết nối tự động/lỗi (x509: certificate signed by unknown authority). Chính vì thế trong phạm vị lab này ta sẽ sử dụng HTTP và thực hiện một số thủ thuật để đánh lừa và bypass cơ chế này của Elastic Search (hành động này không khuyến cáo chỉ phục vụ cho mục đích bài lab).
 
 Đầu tiên ta sẽ thực hiện cấu hình Fleet Server như thông thường và ta xác định bước verify phía client-side.
 
@@ -178,11 +225,22 @@ Sau bước này ta sửa về http và foward đi thì ta đã hoàn toàn có 
 ![Intercepted Request](assets/img/material_posts/post_1/change_config_fleetServer_success.jpg){: width="800" height="500" }
 _Hình 6: Kết quả thực tế._
 
-### Cấu hình Ubuntu Server 
+
+### Cấu hình Windows Server 2022 
+Ở phiên bản này ta lựa chọn Windows Server 2022, tuy không là phiên bản quá mới nhưng đối với phiên bản này hội tụ đủ những yếu tố về bảo mật, tích hợp được agent, được phiên bản ELK version 8.15.5 support tốt, ngoài ra còn đáp ứng tiêu chí tiết kiệm RAM. Đối với phần này ta sẽ tiến hành thực hiện cài đặt cấu hình sysmon, cài đặt agent lên máy và thực hiện kết nối agent tới Fleet server cũng như gửi logs về Elasticsearch.
+
+#### Cài đặt Sysmon 
+
+
+#### Cài đặt Agent
+
+
+### Cấu hình Ubuntu Server 24.04
+
+
 
 ### Cấu hình osTicket
 
-### Cấu hình Iptables
 
 ## Thực nghiệm tấn công 
 ## Phân tích cách thức tấn công
