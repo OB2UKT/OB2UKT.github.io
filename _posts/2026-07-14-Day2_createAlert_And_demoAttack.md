@@ -1,8 +1,8 @@
 ---
 title: Day 2 - Trải nghiệm tạo tính năng và tiến hành demo tấn công thực tiễn
-date: 2026-07-03 14:30:00 +0700
-categories: [Lab Setup, SOC, BlueTeam]
-tags: [BlueTeam, SOC]
+date: 2026-07-014 14:30:00 +0700
+categories: [Lab Setup, SOC Analyst, Attack & Defense]
+tags: [Attack & Defense, SOC Analyst]
 math: true
 mermaid: true
 ---
