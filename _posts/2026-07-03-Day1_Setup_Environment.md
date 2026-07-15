@@ -258,7 +258,7 @@ _Hình 10: Sau khi thiết lập thành công Sysmon._
 #### Cài đặt Agent
 Các agent này được cài trên máy host nhằm mục đích lắng nghe logs trên máy host và tiến hành gửi về cho Elasticsearch để làm tài nguyên phân tích. Chính vì thế ở phần này ta sẽ có 2 mục tiêu chính là thiết lập kết nối về Elasticsearch (port 9200) để gửi logs và kết nối tới Fleet Server (port 8220) để thực hiện quản lý chính agent.
 
-Để làm được điều này ta tiến hành cài đặt elastic và cài đặt với các tham số như địa chỉ fleet-servr, token, policy, port. Khi chạy thành công ta sẽ thấy được "Elastic Agent has been successfully installed".
+Để làm được điều này ta tiến hành cài đặt elastic và cài đặt với các tham số như địa chỉ fleet-servr, token, policy, port. Khi chạy thành công ta sẽ thấy được **"Elastic Agent has been successfully installed"**.
 
 ```bash
 $ProgressPreference = 'SilentlyContinue'
@@ -272,21 +272,87 @@ cd elastic-agent-8.15.0-windows-x86_64
   --fleet-server-port=8220
 ```
 
-#### Cài đặt Intergration
+#### Cài đặt Integration
+Sau việc cấu hình agent trên máy host, ta cần cấu hình thêm integration để đáp ứng các nhu cầu sau: 
+- Chọn, chỉ thị được kênh dữ liệu, điểm quan trọng cần phân tích (trong bài lab này là Windows Defender & Sysmon)
+- Chuẩn hóa dữ liệu tại chỗ và ép kiểu, bởi vì tên gọi trên mỗi hệ điều hành là khác nhau chính vì thế, integration sẽ giúp chuẩn hóa (đổi tên, ép biến thể theo chuẩn ECS duy nhất), điều này giúp dễ truy vết và đảm bảo đồng nhất khi truy vấn logs, săn lùng dấu vết trên nhiều hệ điều hành nền tảng khác nhau.
+- Xử lý, lọc và tối ưu hóa băng thông. Ta hoàn toàn có thể lọc logs ngay tại phía host, ta xử lý và giới hạn những logs nguy hiểm (logs quan trọng) sẽ thu thập và loại bỏ những logs nhiễu (logs mang tính chất thông báo), điều này giảm đáng kể chi phí lưu trữ và truyền tải.
+
+Ta thực hiện cấu hình 2 integration chính cho agent trên host windows
+
+![Intercepted Request](assets/img/material_posts/post_1/config_integration_windows.jpg){: width="800" height="500" }
+_Hình 11: Loại Integration ta chọn để thiết lập trên host Windows._
+
+Chi tiết cấu hình lần lượt như sau: 
+
+![Intercepted Request](assets/img/material_posts/post_1/config_windowsDefender_integration_1.jpg){: width="800" height="500" }
+_Hình 12: Chi tiết cấu hình integration để thu thập logs từ Windows Defender._
+
+![Intercepted Request](assets/img/material_posts/post_1/config_windowsDefender_integration_2.jpg){: width="800" height="500" }
+_Hình 13: Liệt kê các EventID sẽ được nhận đối với logs từ Windows Defender._
+
+
+![Intercepted Request](assets/img/material_posts/post_1/config_windowsEventLogs_integration.jpg){: width="800" height="500" }
+_Hình 14: Chi tiết cấu hình integration Sysmon._
+
+Sau khi cài đặt xong 2 integration trên ta có thể thấy được kết quả sau, từ 2 integration trên ta đã thực hiện thu thập và phân tích chi tiết tập trung vào logs của sysmon và integration.
+
+![Intercepted Request](assets/img/material_posts/post_1/result_after_instal_Integration.jpg){: width="800" height="500" }
+_Hình 15: Kết quả integration của host Windows._
+
+Ta thử tắt chế độ Real-time protection của Windows Defender để kiểm tra khả năng bắt logs của agent.
+
+![Intercepted Request](assets/img/material_posts/post_1/alert_turnoff_windows_defender.jpg){: width="800" height="500" }
+_Hình 16: Khả năng bắt logs khi phát hiện sự thay đổi mang tính nguy hiểm cao._
 
 
 ### Cấu hình Ubuntu Server 24.04
+Tiếp theo ta sẽ lựa chọn Ubuntu 24.04 để làm Ubuntu Server mục tiêu, cũng giống như tiêu chí của Windows ta sẽ lựa chọn phiên bản được ELK hỗ trợ và tối ưu RAM nhất có thể nên ta sẽ lựa chọn phiên bản vừa đủ vì Ubuntu Server không chạy giao diện mà hoàn toàn là CLI nên ta cấu hình máy ảo chạy với 1GB RAM.
 
-#### Cài đặt Agent
+#### Cài đặt Agent - Ubuntu
+Tương tự với việc cài đặt agent trên host của Windows. Ta chỉ cần chạy lệnh đã có sẵn của Fleet Server cấp là có thể tải agent về máy và thực hiện kết nối tới Fleet server và gửi logs về Elasticsearch. Agent nằm trên Ubuntu server chủ yếu tập trung theo dõi những thay đổi nằm trong /var/log/auth.log để báo cáo về Elasticsearch về những trạng thái truy cập bất thường, brute-force, authentication failure.
 
-#### Cài đặt Intergration
+``` bash
+
+```
+
+
+### Cấu hình C2 Server - Mythic Framework
+Framework Mythic này nhằm mục đích tạo ra.
+```bash
+sudo apt-get update \&\& apt-get upgrade
+sudo apt install docker-compose
+
+# Khởi động service Docker
+sudo systemctl start docker
+
+# (Tùy chọn) Cài đặt để Docker tự động chạy mỗi khi khởi động lại máy
+sudo systemctl enable docker
+
+# Kiểm tra xem Docker đã hoạt động bình thường chưa (nếu hiện chữ "active (running)" màu xanh là thành công)
+sudo systemctl status docker
+
+# Thêm user hiện tại vào group docker
+sudo usermod -aG docker $USER
+
+# Áp dụng quyền mới ngay lập tức mà không cần logout
+newgrp docker
+
+sudo apt install make
+
+git clone https://github.com/its-a-feature/Mythic
+cd Mythic
+sudo ./install_docker_ubuntu.sh
+make
+
+./mythic-cli start
+```
+
 
 
 ### Cấu hình osTicket
 
 
-## Thực nghiệm tấn công 
-## Phân tích cách thức tấn công
-## Ngăn chặn và giải pháp
-## Bài học rút ra 
+
+
 
