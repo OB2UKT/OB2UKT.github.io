@@ -334,7 +334,7 @@ sudo systemctl status docker
 
 # Thêm user hiện tại vào group docker
 sudo usermod -aG docker $USER
-
+mythic
 # Áp dụng quyền mới ngay lập tức mà không cần logout
 newgrp docker
 
@@ -347,10 +347,24 @@ make
 
 ./mythic-cli start
 ```
+![Intercepted Request](assets/img/material_posts/post_1/c2_config_make_result.jpg){: width="800" height="500" }
+_Hình 17: Chi tiết log cài đặt Mythic._
 
 
+![Intercepted Request](assets/img/material_posts/post_1/c2_result_after_login_mythicServer.jpg){: width="800" height="500" }
+_Hình 18: Giao diện của Mythic Server._
 
 ### Cấu hình osTicket
+Trong bối cảnh số lượng logs lớn, mặc dù ELK Stack đã cho phép ta cài đặt alert để thông báo những bất thường khi có logs bất thường xuất hiện. Tuy nhiên vấn đề kiểm soát và xử lý các alert này lại tiếp tục đặt ra bài toán lớn cần được giải quyết, một hành vi bất thường cần được báo cáo chuẩn xác tại thời điểm xảy ra để phục vụ cho đội Incident Response và kiểm soát được vòng đời của alert đã trải qua những giai đoạn nào đối với SOC Analyst . Nếu cập nhật trạng thái của alert qua mỗi khâu xử lý một cách thủ công (qua email hay nền tảng liên lạc cá nhân) sẽ mang lại nhiều bất cập và kèm theo những rủi ro, sai sót ngoài ra còn thiếu đồng bộ và thất thoát. Gây ảnh hướng tới hiệu suất xử lý và rối quy trình. 
+
+Chính vì thế osTicket Server là giải pháp được đưa ra để khắc phục những hạn chế và mang lại giá trị như:
+- Phân loại log dựa trên trình tự thời gian và mức độ impact, giúp xác định thứ tự ưu tiên xử lý.
+- Cập nhật trạng thái, giúp quản lý vòng đời của alert (Vd: New -> In progress -> Resolved -> Closed) ngoài.
+- Phân quyền, phân chia nhiệm vụ và trách nhiệm cho chính ticket và tránh xử lý trùng lập công việc và thiếu minh bạch.
+- Lưu trữ các thao tác điều tra, log liên quan và phương án khắc phục, những ghi chú xử lý và thao tác giải quyết sẽ được lưu lại để phục vụ cho hậu kỳ và xây dựng cẩm nang xử lý các trường hợp tương tự trong tương lai.
+
+
+
 
 
 
