@@ -359,7 +359,7 @@ Chính vì thế osTicket Server là giải pháp được đưa ra để khắc
 
 ![Intercepted Request](assets/img/material_posts/post_1/config_osTicket_installer.jpg){: width="800" height="500" }
 
-![Intercepted Request](assets/img/material_posts/post_1/config_osTicket_installer_2jpg){: width="800" height="500" }
+![Intercepted Request](assets/img/material_posts/post_1/config_osTicket_installer_2.jpg){: width="800" height="500" }
 _Hình 24: Chi tiết cấu hình osTicket._
 
 ![Intercepted Request](assets/img/material_posts/post_1/result_after_install_osticket.jpg){: width="800" height="500" }
@@ -368,12 +368,12 @@ _Hình 25: Kết quả sau khi cài đặt osTicket._
 #### osTicket Collab With ELK Integration
 Ở ELK (phiên bản trả phí) chúng ta được phép kết nối đến các Connector như Gmail, Teams,... các platform khác để có thể gửi đi alert trên các nền tảng đó. Ở trong bài lab này ta có thể sử dụng free-trial để có thể thực hiện tạo kết nối tới osTicket mà ta đã host sẵn ở bước trên để tiến hành thu thập và quản lý các ticket.
 
-Trong phần này ta sẽ chú trọng đến việc cài đặt và thiết lập kết nối từ kibana đến osTicket. Ta sẽ thực hiện các bước cài đặt như sau:
+Trong phần này ta sẽ chú trọng đến việc cài đặt và thiết lập kết nối từ Kibana đến osTicket để có thể gửi cảnh báo đến . Ta sẽ thực hiện các bước cài đặt như sau:
 
 ![Intercepted Request](assets/img/material_posts/post_1/Initital_osTicket_alert_on_kibana.jpg){: width="800" height="500" }
 _Hình 26: Cấu hình đểtạo kết nối tới osTicket._
 
-Để có thể kiểm tra khả năng tạo ticket và gửi tới osTicket từ Kibana ta thử gửi đi 1 gói tin dạng .xml dựa trên một form có sẵn.
+Để có thể kiểm tra khả năng tạo ticket và gửi tới osTicket từ Kibana ta thử gửi đi 1 gói tin dạng .xml dựa trên một form đã chuẩn bị sẵn.
 
 ![Intercepted Request](assets/img/material_posts/post_1/Test_Alert2osTicket.jpg){: width="800" height="500" }
 _Hình 27: Thực hiện tạo gói tin để gửi tới osTicket._
