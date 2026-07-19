@@ -10,9 +10,6 @@ mermaid: true
 ## Kịch bản tấn công thực tế 
 Ở phần này ta sẽ chia việc tấn công thành nhiều giai đoạn và sẽ giải thích chi tiết ở từng giai đoạn. Mục đích của phần này nhằm demo lại một cuộc tấn công trong thực tế nhắm vào Windows Server (đã bật sẵn RDP và cấu hình bảo mật yếu) mà chúng ta đã dựng trước đó ta sẽ tiến hành bruteforce sau đó trích tiến hành khai thác và đánh cắp thông tin.
 
-Toàn bộ quy trình triển khai thực tế:
-
-
 ### Initial Access
 
 ![Intercepted Request](assets/img/material_posts/post_3/Stragery_Attack/Initial_Access.jpg){: width="800" height="500" }
@@ -59,12 +56,11 @@ _Hình 6: Mô tả quy trình thực thi agent trước khi tấn công._
 ![Intercepted Request](assets/img/material_posts/post_3/Stragery_Attack/C2_Exfilltration.jpg){: width="800" height="500" }
 _Hình 7: Quy trình đánh cắp dữ liệu ._
 
-
-
 Dựa trên những tiền đề trước đó ở bước này ta thực hiện bước cài đặt agent lên máy nạn nhân và tiến hành chạy nó. Bởi vì bối cảnh hiện tại ta đã dựa vào việc khai thác thành công Remote Desktop trước đó nên tại bước này ta chỉ cần host file (.exe) và tải về để thực hiện chạy file cài đặt agent.
 
 
 Để thực hiện được điều này ta cần tạo thành công agent qua các bước sau: 
+
 ![Intercepted Request](assets/img/material_posts/post_3/Stragery_Attack/Gen_payload_1.jpg){: width="800" height="500" }
 _Hình 8: Cấu hình thể loại file thực thi, lựa chọn mục tiêu tấn công của payload._
 
@@ -91,9 +87,80 @@ _Hình 14: Sau khi chạy và cài đặt thành công agent sẽ có một call
 ![Intercepted Request](assets/img/material_posts/post_3/Stragery_Attack/Exfilltration_SensitiveData_8.jpg){: width="800" height="500" }
 _Hình 15: Tiến hành đánh cắp file Sensitive trên máy nạn nhân._
 
+## Triển khai biện pháp phòng tránh và ngăn ngừa
+Để có thể ngăn chặn các cuộc tấn công sẽ diễn ra tương tự trong tương lai bằng cách thiết lập các rule, alert cảnh báo nếu phát hiện bất thường trong log phân tích. (ĐANG VIẾT)
 
-## Triển khai phân tích và ngăn ngừa
 
-## Giải pháp 
+### Tạo Alert 
+Alert là một tính năng được sử dụng để đảm bảo luồng dữ liệu, giám sát luồng log để đảm bảo trạng thái hoạt động của các agent (Filebeat, winlog, sysmon, ...) trên máy chủ, nếu như chúng ngưng kết nối và không cập nhật log về ELK sẽ thông báo ngay cho các vị trí chịu trách nhiệm xử lý.
 
-## Bài học rút ra 
+Đảm bảo tình trạng tài nguyên, cảnh báo khi CPU của máy chủ web vượt quá ngưỡng quy định hoặc ổ cứng của Elasticsearch Cluster sắp đầy. Ngoài ra sẽ cảnh báo khi thời gian phản hồi của một API bị chậm hoặc tỷ lệ lỗi HTTP 500 tăng đột biến. Alert log thiên hướng về cảnh báo tình trạng hệ thống, những thay đổi bất thường trong logs (đo lường thay đổi đo về lượng) để đưa ra cảnh báo/thông báo.
+
+Ta có thể áp dụng để tiến hành đếm được những bất thường trong security, những hành vi bất thường dựa trên ngưỡng định sẵn. Tuy nhiên chỉ nhằm mục đích tham khảo và lấy số liệu thống kê chứ không được sử dụng phục vụ mục đích security chính bởi vì một số nhược điểm về độ chuẩn xác và dễ bị false positive. Ta sẽ sử dụng tính năng khác để đảm nhiệm vai trò security được phân tích ở bên dưới.s
+
+#### Tạo Alert cho SSH Brute-force
+Đầu tiên để có thể tạo được alert để bắt chuẩn xác những sự thay đổi bất thường, hay những hành vi bất thường ta cần nắm bắt được yếu tố, đặc điểm của các hành vi trên. Đối với Brute-force là một dạng tấn công với mục đích là tấn công vào phần xác thực tài khoản của mục tiêu khi cố tình thử toàn bộ mật khẩu có thể có để tìm ra mật khẩu chuẩn nhất để có thể đăng nhập tài khoản nạn nhân mà không có sự cho phép. Vậy thì trong lúc thử sẽ có những đặc điểm nhận dạng như: 
+- Cùng địa chỉ **ip** cố tình nhập sai password nhiều lần trong một khoảng thời gian ngắn --> xuất hiện nhiều log như **fail attempts**.
+- Tinh vi hơn có thể là nhiều địa chỉ ip đến từ nhiều nơi cùng cố thử mật khẩu của một tài khoản đang bị nhắm tới. --> Tài khoản của một **user** bị thử sai password nhiều lần trong khoảng thời gian ngắn.
+
+Dựa trên những đặc điểm/tiêu chí trên ta thực hiện truy vấn để tìm ra những log, manh mối nghi ngờ là SSH Brute-force.
+
+![Intercepted Request](assets/img/material_posts/post_3/Create_Alert/Query_logs_SSH_Bruteforce.jpg){: width="800" height="500" }
+_Hình 16: Mô tả các logs đáng nghi liên quan tới SSH Brute-Force._
+
+Từ những logs trên ta tiến hành tạo Alert để thông báo mỗi khi tình trạng này xảy ra và chủ động phòng ngừa/ngăn chặn trước những nguy cơ, hiểm họa tiềm ẩn trong tương lai.
+
+![Intercepted Request](assets/img/material_posts/post_3/Create_Alert/Create_Alert_1.jpg){: width="800" height="500" }
+
+![Intercepted Request](assets/img/material_posts/post_3/Create_Alert/Create_Alert_2.jpg){: width="800" height="500" }
+_Hình 17: Chi tiết cấu hình của Alert._
+
+Ở phần nay ngoài việc đặt ngưỡng (threshold) cho việc kích hoạt alert ta cấu hình thêm việc tạo và gửi ticket đến osTicket Server mà trước đó đã thực hiện cấu hình và cài đặt. Những lợi ích mà điều này mang lại đã được trình bày chi tiết ở blog trước.
+
+#### Tạo Alert cho RDP Bruteforce
+Tiếp theo tương tự với phần trước khi ngăn chặn SSH bruteforce ta cần tìm ra được những đặc điểm nhận dạng của dạng tấn công này và từ đó khai thác chúng để đưa tìm ra được những logs đáng ngờ. Khác với Ubuntu, Windows đã có sẵn những EventID để ta có thể dựa vào đó và xác định được những logs Failed Authentication. 
+
+![Intercepted Request](assets/img/material_posts/post_3/Create_Alert/information_about_failed_authentication.jpg){: width="800" height="500" }
+_Hình 18: Chi tiết thông tin về Event ID 4625._
+
+Tương tự với phần trên khi đã xác định được các yếu tố/đặc điểm của kiểu tấn công ta sẽ tạo alert dựa trên điều đó.
+
+![Intercepted Request](assets/img/material_posts/post_3/Create_Alert/Query_logs_RDP_Bruteforce.jpg){: width="800" height="500" }
+_Hình 19: Chi tiết alert RDP Bruteforce._
+
+### Tạo Detection rules (SIEM)
+Khác với Alert - xuất hiện cảnh báo/thông báo khi vượt ngưỡng bất thường/thỏa mãn điều kiện. Rule có phần chi tiết và nhiều chức năng hơn, rule có khả năng phát hiện mối đe dọa/tấn công dựa trên dấu hiệu xâm nhập và chuỗi hành vi (khác với Alert chỉ nhận diện bằng threshold). Ngoài ra rule có thể tạo ra một Security Alert bao gồm nhiều thông tin chi tiết về đối tượng hơn Alert, điểm đánh giá mức độ nguy hiểm, gán nhãn MITRE ATT&CK, quy trình xử lý đối tượng, các bài viết liên quan về đối tượng để đội SOC Analyst/Incident Response có thể dựa vào thông tin để xử lý nhanh chóng, giúp cung cấp bối cảnh, quy trình xử lý, thông tin cần thiết để giảm thời gian phân tích logs và xử lý công việc chuyên nghiệp hơn.
+
+Trong thực tế Detection rules (SIEM) thường được sử dụng để đảm bảo sự an toàn của tài sản số, bởi vì khả năng phân tích hành vi và khả năng cung cấp đầy đủ bối cảnh và quy trình phân tích và xử lý cụ thể giúp cấu hình hệ thống chuyên nghiệp và xử lý nhanh chóng, đảm bảo sự an toàn của hệ thống. Một điểm đáng tiền của Dectection rule so với Alert đó là khả năng đào sâu vào hành vi và chi tiết logs thay vì dựa vào threshold như Alert (Discovery) chính vì thế nó có thể tránh khỏi false positive do attacker cố tình nhằm đánh lạc hướng hoặc gây động với nhiều mục đích khác nhau.
+
+Cách thiết lập rule ở đây ta sử dụng cơ bản bằng threshold tương tự với phần alert trước đó, ta liên kết với osTicket để gửi thông báo/cảnh báo về mỗi khi phát hiện tấn công. 
+
+![Intercepted Request](assets/img/material_posts/post_3/Create_Rules/detail_rules_SSH_bruteforce.jpg){: width="800" height="500" }
+_Hình 20: Chi tiết cấu hình rule SSH bruteforce._
+
+![Intercepted Request](assets/img/material_posts/post_3/Create_Rules/detail_rules_bruteforce_RDP.jpg){: width="800" height="500" }
+_Hình 21: Chi tiết cấu hình rule RDP bruteforce._
+
+![Intercepted Request](assets/img/material_posts/post_3/Create_Rules/Detail_Rule_Detect_C2_Agent.jpg){: width="800" height="500" }
+_Hình 22: Chi tiết cấu hình rule detect C2 Agent._
+
+Đối với việc phát hiện C2 Agent ta sẽ dựa vào một số yếu tố đặc điểm của nó như sau: 
+- Tạo tiến trình thực thi mới --> Event ID = 1, việc tạo tiến trình mới để có thể thực thi các lệnh từ xa là đặc điểm dễ dàng thấy được của agent.
+
+![Intercepted Request](assets/img/material_posts/post_3/Create_Rules/information_C2Agent.jpg){: width="800" height="500" }
+_Hình 23: Thông tin chi tiết về Event ID 1._
+
+- Sự khác biệt giữa tên file gốc và file thực thi trên máy nạn nhân, ở đây tệp tin agent được giả mạo là "svhost-no1hiz9.exe" nhưng thực chất tên gốc của nó là apollo.exe là một Agent của Mythic. 
+
+![Intercepted Request](assets/img/material_posts/post_3/Create_Rules/detail_c2_agent_logs.jpg){: width="800" height="500" }
+_Hình 24: Chi tiết log của C2 Agent hiển thị bởi Kibana._
+
+Sau khi thiết lập xong rule ta tiến hành tấn công (SSH Bruteforce) lại một lần nữa để kiểm tra hoạt động của rule ta vừa mới thiết lập.
+
+![Intercepted Request](assets/img/material_posts/post_3/Create_Rules/Ticket_receive.jpg){: width="800" height="500" }
+_Hình 25: Thông báo được gửi tới osTicket với nội dung của hành vi đe dọa hệ thống._
+
+### Cốt lõi vấn đề và cách phòng tránh.
+
+
+## Bài học rút ra và nhược điểm của hệ thống.
