@@ -7,12 +7,12 @@ math: true
 mermaid: true
 ---
 
-## 1. Tổng quan kiến trúc của mô hình.
+## Tổng quan kiến trúc của mô hình.
 
 ![Intercepted Request](assets/img/material_posts/post_1/structure_lab.jpg){: width="800" height="500" }
 _Hình 1: Hình ảnh sơ đồ hệ thống_
 
-### 1.1 Thành phần
+### Thành phần
 Hệ thống sẽ phân loại server dựa vào chức năng cụ thể như sau:
 - Server mục tiêu: Windows Server 2022, Ubuntu Server.
 - Server quản lý Agent trên các máy chủ mục tiêu: Fleet Server.
@@ -22,7 +22,7 @@ Hệ thống sẽ phân loại server dựa vào chức năng cụ thể như sa
 
 Các server sẽ được cấu hình chung một mạng và việc phân tích log sẽ dựa vào Web GUI.
 
-### 1.2 Mục tiêu
+### Mục tiêu
 Triển khai và xây dựng một mô hình đơn giản có đầy đủ thành phần vai trò, chức năng. Sau đó triển khai các cuộc tấn công nhằm khai thác lên hệ thống và cuối cùng sẽ là phân tích log và tìm ra các dấu hiệu của cuộc tấn công, nắm bắt và tìm cách ngăn chặn, đề xuất giải pháp.
 
 ## Tìm hiểu công nghệ sử dụng.
