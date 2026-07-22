@@ -2,7 +2,7 @@
 title: Day 1 - Xây dựng mô hình hệ thống thực tế
 date: 2026-07-03 14:30:00 +0700
 categories: [Lab Setup, SOC, BlueTeam]
-tags: [BlueTeam, SOC]
+tags: [BlueTeam, SOC Lab]
 math: true
 mermaid: true
 ---
@@ -351,7 +351,7 @@ Trong bối cảnh số lượng logs lớn, mặc dù ELK Stack đã cho phép 
 
 Chính vì thế osTicket Server là giải pháp được đưa ra để khắc phục những hạn chế và mang lại giá trị như:
 - Phân loại log dựa trên trình tự thời gian và mức độ impact, giúp xác định thứ tự ưu tiên xử lý.
-- Cập nhật trạng thái, giúp quản lý vòng đời của alert (Vd: New -> In progress -> Resolved -> Closed) ngoài.
+- Cập nhật trạng thái, giúp quản lý vòng đời của alert (ví dụ như: New -> In progress -> Resolved -> Closed).
 - Phân quyền, phân chia nhiệm vụ và trách nhiệm cho chính ticket và tránh xử lý trùng lập công việc và thiếu minh bạch.
 - Lưu trữ các thao tác điều tra, log liên quan và phương án khắc phục, những ghi chú xử lý và thao tác giải quyết sẽ được lưu lại để phục vụ cho hậu kỳ và xây dựng cẩm nang xử lý các trường hợp tương tự trong tương lai.
 
