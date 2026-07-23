@@ -261,15 +261,13 @@ Các agent này được cài trên máy host nhằm mục đích lắng nghe lo
 Để làm được điều này ta tiến hành cài đặt elastic và cài đặt với các tham số như địa chỉ fleet-servr, token, policy, port. Khi chạy thành công ta sẽ thấy được **"Elastic Agent has been successfully installed"**.
 
 ```bash
+
 $ProgressPreference = 'SilentlyContinue'
-Invoke-WebRequest -Uri https://artifacts.elastic.co/downloads/beats/elastic-agent/elastic-agent-8.15.0-windows-x86_64.zip -OutFile elastic-agent-8.15.0-windows-x86_64.zip
-Expand-Archive .\elastic-agent-8.15.0-windows-x86_64.zip
-cd elastic-agent-8.15.0-windows-x86_64
-.\elastic-agent.exe install `
-  --fleet-server-es=http://192.168.122.1:9200 `
-  --fleet-server-service-token=TOKEN_HIDDEN_WHEN_DISPLAY `
-  --fleet-server-policy=fleet-server-policy `
-  --fleet-server-port=8220
+Invoke-WebRequest -Uri https://artifacts.elastic.co/downloads/beats/elastic-agent/elastic-agent-8.15.5-windows-x86_64.zip -OutFile elastic-agent-8.15.5-windows-x86_64.zip
+Expand-Archive .\elastic-agent-8.15.5-windows-x86_64.zip -DestinationPath .
+cd elastic-agent-8.15.5-windows-x86_64
+.\elastic-agent.exe install --url=http://192.168.122.1:8220 --enrollment-token=VHVzNmpaOEJDdWlNU2U4TEE4OWE6Q25ENXNVZ0VTZm02dEgtbG9rcGFHQQ==
+
 ```
 
 #### Cài đặt Integration

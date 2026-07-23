@@ -163,11 +163,16 @@ _Hình 25: Thông báo được gửi tới osTicket với nội dung của hàn
 
 ### Cốt lõi lỗ hổng và cách phòng tránh
 #### SSH Bruteforce
-Cốt lõi vấn đề dẫn đến SSH Brute force trong bài lab gặp phải đến từ việc cấu hình sai 
+Cốt lõi vấn đề dẫn đến SSH Brute force trong bài lab gặp phải không đến từ lỗi của SSH mà đến từ vị trí ta đặt hệ thống và thiếu đi những cấu hình an toàn/bảo vệ. Ở bước xác thực lỗi ở đến tực việc ta cho phép xác thực bằng mật khẩu (dạng ký tự) thay vì sywr dụng cơ chế xác thực bằng khóa mật mã học, mật khẩu còn khá yếu và dễ đoán (đến từ yếu tố con người - đặt mật khẩu thuận tiện để tái sử dụng, ghi nhớ) dẫn đến dễ dàng bị dò thấy. Song với đó là thiếu cơ chế rate-limit khi không có cơ chế ngăn chặn khi hành vi thử sai được diễn ra dẫn đến attacker có thể dễ dàng dò ra mật khẩu.
+
+Để khắc phục được điều này ngoài việc cấu hình rule như ở phía trên ta cần có những cơ chế cách thức bảo vệ chủ động giúp ngăn chặn kẻ tấn công thử sai quá nhiều lần với cùng 1 địa chỉ IP, công cụ đề đề xuất là Fail2Ban, DenyHosts giúp ngăn chặn và tự động thêm rule vào iptable để block IP.
+
+Cấu hình file **/etc/ssh/sshd_config** với **PermitRootLogin no** không cho phép bruteforce vào tài khoản có quyền cao nhất, ngoài ra ta cấu hình thêm MaxAuthTries để giảm số lượt thử , ta có thể sử dụng **AllowUsers** để có thể chỉ đích danh những đối tượng có thể truy cập. Cuối cùng **PasswordAuthentication no** ta sẽ tắt hoàn toàn việc xác thực bằng mật khẩu, yêu cầu sử dụng các kỹ thuật xác thực hiện đại và khó phá hơn.
 
 
 #### RDP Bruteforce
+Nguyên nhân cũng tương tự phần trước đó chính vì thế để ngăn chặn được điều này ta cần loại bỏ khả năng tương tác trực tiếp với port 3389 (RDP) từ mạng public. Ta có thể triển khai VPN hoặc Remote Desktop Gateway để có thể tích hợp vào nhiều yêu tố xác thực hơn (MFA - Multi Factor Authentication, NLA - Network Level Authentication) nếu như vẫn muốn sử dụng RDP.
 
 
 ## Kết quả và bài học
-Bài blog đã hoàn thành mục đích khi xây dựng và triển khai một mô hình mạng lưới gồm nhiều thành phần thu nhỏ một mô hình hệ thống trong thực tế. Đã triển khai tấn công và đưa ra những phương hướng khắc phục hậu quả. Đã mô phỏng hoàn toàn một mô hình xử lý sự cố khi tiến hành.
+Bài blog đã hoàn thành mục đích khi xây dựng và triển khai một mô hình mạng lưới gồm nhiều thành phần thu nhỏ một mô hình hệ thống trong thực tế. Đã triển khai tấn công và đưa ra những phương hướng khắc phục hậu quả. Đã mô phỏng hoàn toàn một mô hình xử lý sự cố khi tiến hành. Tuy nhiên mô hình ở mức độ thử nghiệm và chỉ nhằm mục đích thực hiện cấu hình và phân tích các và tiến hành khắc phục, hạn chế tấn công nên có thể sơ đồ cấu hình vẫn chưa chuẩn. Và mục đích của bài Blog được tạo ra nhầm cho thấy được góc nhìn trực quan nhất về một mô hình SOC thu nhỏ từ việc cấu hình cho tới nhận logs, phân tích log và tấn công cơ bản để xem thử phản ứng bên trong sẽ diễn ra như thế nào.
