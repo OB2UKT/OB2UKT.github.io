@@ -14,16 +14,14 @@ _Hình 1: Hình ảnh sơ đồ hệ thống_
 
 ### Thành phần
 Hệ thống sẽ phân loại server dựa vào chức năng cụ thể như sau:
-- Server mục tiêu: Windows Server 2022, Ubuntu Server.
+- Server mục tiêu: Windows Server (ver 2022), Ubuntu Server (ver 24.04).
 - Server quản lý Agent trên các máy chủ mục tiêu: Fleet Server.
 - Server lưu trữ, phân tích, trực quan hóa log: Elastic & Kibana.
-- Server quản lý ticket, cảnh báo phát sinh: osTicket Server.
+- Server quản lý ticket, cảnh báo đến từ Elastic & Kibana: osTicket Server.
 - Server tấn công: C2 Server.
 
-Các server sẽ được cấu hình chung một mạng và việc phân tích log sẽ dựa vào Web GUI.
-
 ### Mục tiêu
-Triển khai và xây dựng một mô hình đơn giản có đầy đủ thành phần vai trò, chức năng. Sau đó triển khai các cuộc tấn công nhằm khai thác lên hệ thống và cuối cùng sẽ là phân tích log và tìm ra các dấu hiệu của cuộc tấn công, nắm bắt và tìm cách ngăn chặn, đề xuất giải pháp.
+Triển khai và xây dựng một mô hình đơn giản có đầy đủ thành phần để phục vụ cho việc phân tích của SOC. Sau đó triển khai các cuộc tấn công nhằm khai thác hệ thống và dựa vào đó phân tích log, tìm ra các dấu hiệu của cuộc tấn công, tìm cách ngăn chặn và đề xuất giải pháp.
 
 ## Tìm hiểu công nghệ sử dụng.
 ### ELK Stack (Elasticsearch & Logstash & Kibana)
@@ -74,12 +72,12 @@ Chính vì thế ELK Stack sẽ phù hợp hơn với dự án hiện tại khi 
 
 ## Triển khai thực tiễn
 ### Cách thức triển khai
-Mô hình sẽ có thể triển khai trơn tru nếu như có thể host trên cloud tuy nhiên để tối ưu chi phí và chỉ dùng một máy điều hành tất cả thì ở đây ta sẽ chuyển mô hình dưới dạng host như sau:
-- Host trên KVM/QEMU: máy Attacker (Kali-Linux), Windows Server(RDP). 
-- Máy Host sẽ đóng vai là máy SOC Analyst Laptop. 
-- Host trên Docker: Elastic & Kibana + Fleet Server + Ubuntu Server (SSH) + osTicket Server + C2 server.
+Mô hình sẽ có thể triển khai trơn tru nếu như có thể host trên cloud tuy nhiên để tối ưu chi phí và chỉ có một máy điều hành tất cả thì ở đây ta sẽ chuyển mô hình dưới dạng sau:
+- Host trên KVM/QEMU: máy Attacker (Kali-Linux), Windows Server(RDP), Ubuntu Server (SSH), osTicket Server, C2 server. 
+- Máy Host sẽ đóng vai là máy SOC Analyst Laptop và đứng giữa để giao tiếp giữa 2 môi trường ảo. 
+- Host trên Docker: Elastic & Kibana, Fleet Server.
 
-Tuy nhiên đối với cách làm này sẽ mắc phải vấn đề giữa 2 cách ảo hóa KVM và Docker, chúng sẽ thực hiện tạo ra các switch mạng ảo khác nhau. Điều nay đi ngược hoàn toàn so với mô hình ban đầu đó là các server đều nằm chung 1 mạng. Để giải quyết việc này ta sẽ điều chỉnh iptables (mở tường lửa) trên máy host để đứng ra để thực hiện chuyển tiếp các gói tin giữa 2 vùng mạng, và biến nó hoạt động tương tự như chúng đang nằm trong một mạng.
+Đối với cách làm này sẽ mắc phải vấn đề giữa 2 cách ảo hóa KVM và Docker, chúng sẽ thực hiện tạo ra các switch mạng ảo khác nhau. Để giải quyết việc này ta sẽ điều chỉnh iptables (mở tường lửa) trên máy host để đứng ra để thực hiện chuyển tiếp các gói tin giữa 2 vùng mạng, và biến nó hoạt động tương tự như chúng đang nằm trong một mạng.
 
 ### Lưu ý triển khai
 Bởi vì Elasticsearch sử dụng mmpafs để lưu các index của nó tuy nhiên nhân linux mặc định giới hạn số lượng bộ nhớ mmap quá thấp nên có thể làm crash chính vì thế ta cần set số này ở mức cao.
@@ -89,7 +87,6 @@ _Hình 2: Cấu hình cài đặt mmap trên máy host_
 ### Elasticsearch Set-up
 Để cấu hình Elastic ta thực hiện cấu hình trên docker-compose.yml như sau: 
 ```yml
-
 services:
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
@@ -97,11 +94,11 @@ services:
     environment:
       - node.name=es-node-01
       - cluster.name=soc-lab-cluster
-      - discovery.type=single-node # Ép chạy chế độ 1 node, không tìm kiếm cluster để nhẹ máy
-      - ELASTIC_PASSWORD=SOC_Password_123! # Set cứng mật khẩu cho user 'elastic'
-      - xpack.security.enabled=true # Bắt buộc cho Fleet/Agent
-      - xpack.security.http.ssl.enabled=false # Tắt TLS để dễ kết nối từ KVM và giảm tải CPU
-      - ES_JAVA_OPTS=-Xms2g -Xmx2g # Giới hạn cứng JVM Heap size là 2GB
+      - discovery.type=single-node 
+      - ELASTIC_PASSWORD=SOC_Password_123! 
+      - xpack.security.enabled=true 
+      - xpack.security.http.ssl.enabled=false 
+      - ES_JAVA_OPTS=-Xms2g -Xmx2g 
     volumes:
       - es_data:/usr/share/elasticsearch/data
     ports:
@@ -111,8 +108,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 3G # chống OOM host
-
+          memory: 3G 
 volumes:
   es_data:
     driver: local
@@ -122,7 +118,7 @@ networks:
     driver: bridge
     ipam:
       config:
-        - subnet: 172.20.0.0/16 # Định hình dải mạng Private
+        - subnet: 172.20.0.0/16 
 
 ```
 Sau khi cấu hình xong file ta chỉ cần chạy lệnh "docker compose up -d" để hoàn tất việc cài đặt Elasticsearch.
@@ -135,18 +131,21 @@ Sau khi cấu hình xong file ta chỉ cần chạy lệnh "docker compose up -d
     ports:
       - "5601:5601"
     environment:
-      - SERVER_NAME=soc-kibana
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200 # Khai báo gọi thẳng tên container ES qua mạng nội bộ
+      - SERVER_NAME=soc-kibanaelasticsearch
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200 
       - ELASTICSEARCH_USERNAME=kibana_system
-      - ELASTICSEARCH_PASSWORD=SOC_Password_123!  # ở đây set tạm thời tránh để credential dạng cleartext trong file.
+      - ELASTICSEARCH_PASSWORD=SOC_Password_123!
+      - XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=yeutoquocyeudongbaohoctaptot1234
+      - XPACK_SECURITY_ENCRYPTIONKEY=yeutoquocyeudongbaohoctaptot1234
+      - XPACK_REPORTING_ENCRYPTIONKEY=yeutoquocyeudongbaohoctaptot1234
     networks:
       - soc_private_net
     depends_on:
-      - elasticsearch # Đảm bảo ES khởi động xong thì Kibana mới được chạy
+      - elasticsearch 
     deploy:
       resources:
         limits:
-          memory: 1G # Giới hạn tài nguyên sử dụng ram.
+          memory: 1G 
 ```
 Kibana cũng là một phần của ELK Stack chính vì thế để tiện lợi ta thực hiện pull Kibana version 8.15, tuy nhiên cần lưu ý rằng đối với Kibana từ bản 8+ sẽ áp dụng nguyên tắc đặc quyền tối thiểu (hay Principle of Least Privilege). Bởi vì Kibana còn nhiều tác vụ chạy ngầm và ghi dữ liệu vào index hệ thống nên nếu sử Superuser (tài khoản elastic) để làm việc này rủi ro leo thang đặc quyền sẽ cao nếu như Kibana bị tấn công. 
 
@@ -200,6 +199,33 @@ sudo iptables -I DOCKER-USER 1 -m conntrack --ctstate ESTABLISHED,RELATED -j ACC
 Sau khi cấu hình thành công ta đã đáp ứng được việc các agent nằm trên các máy host có thể gửi trực tiếp log trực tiếp về Elastic Search (port 9200), ngoài ra các agent này phải bị kiểm soát, quản lý thông qua kết nối với Fleet Server (port 8220).
 
 ### Fleet Server set-up
+```yaml
+  fleet-server:
+      image: docker.elastic.co/beats/elastic-agent:8.15.0
+      container_name: fleet-server
+      restart: on-failure
+      ports:
+        - "8220:8220" # Mở cổng 8220 ra máy Host để kết nối với các máy KVM Windows & Ubuntu
+      environment:
+        - FLEET_SERVER_ENABLE=1
+        - FLEET_SERVER_HOST=0.0.0.0
+        - FLEET_SERVER_POLICY_ID=fleet-server-policy
+        - FLEET_SERVER_ELASTICSEARCH_HOST=http://elasticsearch:9200
+        - FLEET_SERVER_SERVICE_TOKEN=AAEAAWVsYXN0aWMvZmxlZXQtc2VydmVyL3Rva2VuLTE3ODQ3ODcyMDE4Mzg6bXlzaVZ4UEhTN2laUVFPR0pHcmU2UQ
+        - FLEET_SERVER_INSECURE_HTTP=true # Trong thực tế ở đây không được tắt để bảo đảm defense in depth (cho dù có trong mạng nội bộ 
+        # vẫn cần mã hóa nội dung truyền tải đi để tránh rủi ro.)
+      networks:
+        - soc_private_net
+      depends_on:
+        - elasticsearch
+        - kibana
+      deploy:
+        resources:
+          limits:
+            memory: 1G # Cấu hình bộ nhớ.
+
+```
+
 Fleet Server (Control Plane) được thiết lập để quản lý toàn bộ các Elastic Agent được cài đặt trên các máy host. Bản chất nó vẫn là một elastic-agent thông thường, tuy nhiên nó sẽ không đọc logs và đổ về cho Kibana mà ngược lại nó lắng nghe ở port 8220 để quản lý, nhận kết nối từ các Agent khác đổ về. Fleet Server có quyền hành cao dùng để cấp phát API key, quản lý trạng thái của các agent, cấu hình các agent. 
 
 Fleet Server ra đời nhằm giải quyết nhu cầu: 
